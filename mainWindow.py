@@ -3,7 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QAction, QLabel, QScrollArea, QFileDialog, QDockWidget, \
     QGridLayout, QVBoxLayout, QHBoxLayout, QWidget, QButtonGroup, QRadioButton, QPushButton, QColorDialog, QComboBox, QLineEdit, QFrame, \
     QMenu
-from PyQt5.QtGui import QFont, QImage, QPixmap, QKeySequence, QColor, QDragEnterEvent, QDropEvent, QDoubleValidator, QIntValidator
+from PyQt5.QtGui import QFont, QImage, QImageReader, QPixmap, QKeySequence, QColor, QDragEnterEvent, QDropEvent, QDoubleValidator, QIntValidator
 from PyQt5.QtCore import Qt, QDir, QStandardPaths, QSize, QPointF, QObject, QEvent
 from aboutDlg import aboutDlg
 from ImageLabel import ImageLabel
@@ -43,7 +43,7 @@ class JonahWindow(QMainWindow):
         fileMenu.addAction(closeAction)
         fileMenu.addAction(exitAction)
         openFilesAction.triggered.connect(self.onOpenFile)
-        closeAction.triggered.connect(self.onClose)
+        closeAction.triggered.connect(self.onCloseAction)
         exitAction.triggered.connect(self.onQuit)
         
         zoomMenu = self.menuBar().addMenu('&Zoom')
@@ -83,6 +83,7 @@ class JonahWindow(QMainWindow):
         
         self.scrollArea = QScrollArea()
         self.imageLabel = ImageLabel(self.penColor, 2, 'rect')
+        self.imageLabel.setText('drag image file to here!')
         self.imageLabel.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
         self.imageLabel.setScaledContents(True)
         self.scrollArea.setWidget(self.imageLabel)
@@ -90,6 +91,7 @@ class JonahWindow(QMainWindow):
         
         self.scrollArea1 = QScrollArea()
         self.imageLabel1 = ImageLabel(self.penColor, 2, 'rect')
+        self.imageLabel1.setText('drag image file to here!')
         self.imageLabel1.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
         self.imageLabel1.setScaledContents(True)
         self.scrollArea1.setWidget(self.imageLabel1)
@@ -120,9 +122,47 @@ class JonahWindow(QMainWindow):
         self.plot_rgb_hist.clicked.connect(self.plot_rgb_hist_func)
         self.imageLabel.inform_real_Pos.connect(self.__flushPaintPosEdit)
         self.imageLabel1.inform_real_Pos.connect(self.__flushPaintPosEdit1)
+        self.scrollArea.horizontalScrollBar().valueChanged.connect(self.__syncScrollArea1_horScBarVal)
+        self.scrollArea.verticalScrollBar().valueChanged.connect(self.__syncScrollArea1_verScBarVal)
+        self.scrollArea1.horizontalScrollBar().valueChanged.connect(self.__syncScrollArea_horScBarVal)
+        self.scrollArea1.verticalScrollBar().valueChanged.connect(self.__syncScrollArea_verScBarVal)
         
         self.penBoxAction.toggled.connect(self.__toggleToolBoxDockWgt)
         self.colorGamutAction.toggled.connect(self.__toggleColorGamutWgt)
+    
+    def __syncScrollArea1_horScBarVal(self, value:int):
+        if not self.scrollArea.horizontalScrollBar().isVisible():
+            return
+        if not self.scrollArea1.horizontalScrollBar().isVisible():
+            return
+        pos_ratio = value/self.scrollArea.horizontalScrollBar().maximum()
+        target_val = int(pos_ratio*self.scrollArea1.horizontalScrollBar().maximum()+0.5)
+        self.scrollArea1.horizontalScrollBar().setValue(target_val)
+            
+    
+    def __syncScrollArea1_verScBarVal(self, value:int):
+        if not self.scrollArea.verticalScrollBar().isVisible():
+            return
+        if not self.scrollArea1.verticalScrollBar().isVisible() == 0:
+            return
+        pos_ratio = value/self.scrollArea.verticalScrollBar().maximum()
+        self.scrollArea1.verticalScrollBar().setValue(int(pos_ratio*self.scrollArea1.verticalScrollBar().maximum()))
+    
+    def __syncScrollArea_horScBarVal(self, value:int):
+        if not self.scrollArea.horizontalScrollBar().isVisible():
+            return
+        if not self.scrollArea1.horizontalScrollBar().isVisible():
+            return
+        pos_ratio = value/self.scrollArea1.horizontalScrollBar().maximum()
+        self.scrollArea.horizontalScrollBar().setValue(int(pos_ratio*self.scrollArea.horizontalScrollBar().maximum()+0.5))
+        
+    def __syncScrollArea_verScBarVal(self, value:int):
+        if not self.scrollArea.verticalScrollBar().isVisible():
+            return
+        if not self.scrollArea1.verticalScrollBar().isVisible() == 0:
+            return
+        pos_ratio = value/self.scrollArea1.verticalScrollBar().maximum()
+        self.scrollArea.verticalScrollBar().setValue(int(pos_ratio*self.scrollArea.verticalScrollBar().maximum()))
     
     def __setPaintType_line(self):
         self.imageLabel.setPaintType_Line()
@@ -580,10 +620,6 @@ class JonahWindow(QMainWindow):
 
         
     def __setPenBtnColor(self):        
-        #pixmap = QPixmap(self.colorBtn.sizeHint())
-        #pixmap.fill(self.penColor)
-        #self.colorBtn.setIcon(QIcon(pixmap))
-        #self.colorBtn.setIconSize(self.colorBtn.sizeHint())
         self.colorBtn.setStyleSheet('QPushButton{background:rgb(%d,%d,%d);border:none;}'%(self.penColor.red(), self.penColor.green(), self.penColor.blue()))
 
         
@@ -607,13 +643,17 @@ class JonahWindow(QMainWindow):
     def onQuit(self):
         self.close()
     
-    def onClose(self):
+    def onCloseAction(self):
         if self.imageLabel.pixmap()==None and self.imageLabel1.pixmap()==None:
             return
         self.imageLabel.clear()
+        self.imageLabel.setText('drag image file to here!')
+        self.imageLabel.adjustSize()
         self.imageLabel.paintBegin = False
         self.imageLabel.paintEnd = False
         self.imageLabel1.clear()
+        self.imageLabel1.setText('drag image file to here!')
+        self.imageLabel1.adjustSize()
         self.imageLabel1.paintBegin = False
         self.imageLabel1.paintEnd = False
         self.opendFile = ''
@@ -632,18 +672,23 @@ class JonahWindow(QMainWindow):
         fileList = QFileDialog.getOpenFileNames(self, 'open', self.workPath, 'Images(*.jpg *.jpeg *.png *.bmp);;All file(*.*)')# type:list[str]
         if len(fileList)<=0 or len(fileList[0])<=0:
             return
-        img = QImage(fileList[0][0])
+        reader = QImageReader(fileList[0][0])
+        reader.setAutoTransform(True)
+        img = reader.read()
         if img.isNull():
             QMessageBox.information(self, 'error', 'can not open %s as image!'%fileList[0][0], QMessageBox.Ok)
             return
         self.opendFile = fileList[0][0]
         self.__setImage(img, self.zoomList[self.zoomIdx])
         if len(fileList[0])>=2:
-            img1 = QImage(fileList[0][1])
+            reader1 =QImageReader(fileList[0][1])
+            reader1.setAutoTransform(True)
+            img1 = reader1.read()
             if img1.isNull():
                 QMessageBox.information(self, 'error', 'can not open %s as image!'%fileList[0][0], QMessageBox.Ok)
                 return
             self.__setImage1(img1, self.zoomList[self.zoomIdx])
+            self.opendFile1 = fileList[0][1]
         self.__setTitle()
         
     def __setTitle(self):
@@ -685,7 +730,7 @@ class JonahWindow(QMainWindow):
         if self.imageLabel1.paintEnd == True:
             self.imageLabel1.paintCoordinates[0] = QPointF(float(self.start_x_edit1.text())*scale_ratio, float(self.start_y_edit1.text())*scale_ratio)
             self.imageLabel1.paintCoordinates[1] = QPointF(float(self.end_x_edit1.text())*scale_ratio, float(self.end_y_edit1.text())*scale_ratio)
-        self.__adjustImgLabelSize_scrollbarPos1()#缩放image label
+        self.__adjustImgLabelSize_scrollbarPos1()#因为已经关联了另一个scrollbar，会自动调整
             
     def zoomOut(self):
         if self.imageLabel.pixmap() == None or self.originSize == QSize(0, 0):
@@ -742,7 +787,9 @@ class JonahWindow(QMainWindow):
                 if len(fileName)<=0 or fileName==None:
                     return
                 if fileName.endswith(('.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.bmp', '.BMP')):
-                    img = QImage(fileName)
+                    reader = QImageReader(fileName)
+                    reader.setAutoTransform(True)
+                    img = reader.read()
                     if img.isNull():
                         QMessageBox.information(self, 'error', 'can not open %s as image!'%fileName, QMessageBox.Ok)
                         return
@@ -754,7 +801,9 @@ class JonahWindow(QMainWindow):
                 if len(fileName)<=0 or fileName==None:
                     return
                 if fileName.endswith(('.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.bmp', '.BMP')):
-                    img = QImage(fileName)
+                    reader = QImageReader(fileName)
+                    reader.setAutoTransform(True)
+                    img = reader.read()
                     if img.isNull():
                         QMessageBox.information(self, 'error', 'can not open %s as image!'%fileName, QMessageBox.Ok)
                         return
@@ -770,8 +819,12 @@ class JonahWindow(QMainWindow):
             if len(fileName)<=0 or fileName==None or len(fileName1)<=0 or fileName1==None:
                 return
             if fileName.endswith(('.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.bmp', '.BMP')) and fileName1.endswith(('.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.bmp', '.BMP')):
-                img = QImage(fileName)
-                img1 = QImage(fileName1)
+                reader = QImageReader(fileName)
+                reader.setAutoTransform(True)
+                img = reader.read()
+                reader1 = QImageReader(fileName1)
+                reader1.setAutoTransform(True)
+                img1 = reader1.read()
                 if img.isNull() or img1.isNull():
                     QMessageBox.information(self, 'error', 'can not open %s %sas image!'%(fileName, fileName1), QMessageBox.Ok)
                     return
