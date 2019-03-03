@@ -131,76 +131,127 @@ class JonahWindow(QMainWindow):
         self.colorGamutAction.toggled.connect(self.__toggleColorGamutWgt)
     
     def __syncScrollArea1_horScBarVal(self, value:int):
+        '''
+        同步两个图像区域的滚动条位置
+        '''
         if not self.scrollArea.horizontalScrollBar().isVisible():
             return
         if not self.scrollArea1.horizontalScrollBar().isVisible():
             return
-        pos_ratio = value/self.scrollArea.horizontalScrollBar().maximum()
-        target_val = int(pos_ratio*self.scrollArea1.horizontalScrollBar().maximum()+0.5)
-        self.scrollArea1.horizontalScrollBar().setValue(target_val)
+        try:
+            pos_ratio = value/self.scrollArea.horizontalScrollBar().maximum()
+            target_val = int(pos_ratio*self.scrollArea1.horizontalScrollBar().maximum()+0.5)
+            self.scrollArea1.horizontalScrollBar().setValue(target_val)
+        except ZeroDivisionError:
+            return
             
     
     def __syncScrollArea1_verScBarVal(self, value:int):
+        '''
+        同步两个图像区域的滚动条位置
+        '''
         if not self.scrollArea.verticalScrollBar().isVisible():
             return
-        if not self.scrollArea1.verticalScrollBar().isVisible() == 0:
+        if not self.scrollArea1.verticalScrollBar().isVisible():
             return
-        pos_ratio = value/self.scrollArea.verticalScrollBar().maximum()
-        self.scrollArea1.verticalScrollBar().setValue(int(pos_ratio*self.scrollArea1.verticalScrollBar().maximum()))
+        try:
+            pos_ratio = value/self.scrollArea.verticalScrollBar().maximum()
+            target_val = int(pos_ratio*self.scrollArea1.verticalScrollBar().maximum()+0.5)
+            self.scrollArea1.verticalScrollBar().setValue(target_val)
+        except ZeroDivisionError:
+            return
     
     def __syncScrollArea_horScBarVal(self, value:int):
+        '''
+        同步两个图像区域的滚动条位置
+        '''
         if not self.scrollArea.horizontalScrollBar().isVisible():
             return
         if not self.scrollArea1.horizontalScrollBar().isVisible():
             return
-        pos_ratio = value/self.scrollArea1.horizontalScrollBar().maximum()
-        self.scrollArea.horizontalScrollBar().setValue(int(pos_ratio*self.scrollArea.horizontalScrollBar().maximum()+0.5))
+        try:
+            pos_ratio = value/self.scrollArea1.horizontalScrollBar().maximum()
+            target_val = int(pos_ratio*self.scrollArea.horizontalScrollBar().maximum()+0.5)
+            self.scrollArea.horizontalScrollBar().setValue(target_val)
+        except ZeroDivisionError:
+            return
         
     def __syncScrollArea_verScBarVal(self, value:int):
+        '''
+        同步两个图像区域的滚动条位置
+        '''
         if not self.scrollArea.verticalScrollBar().isVisible():
             return
-        if not self.scrollArea1.verticalScrollBar().isVisible() == 0:
+        if not self.scrollArea1.verticalScrollBar().isVisible():
             return
-        pos_ratio = value/self.scrollArea1.verticalScrollBar().maximum()
-        self.scrollArea.verticalScrollBar().setValue(int(pos_ratio*self.scrollArea.verticalScrollBar().maximum()))
+        try:
+            pos_ratio = value/self.scrollArea1.verticalScrollBar().maximum()
+            target_val = int(pos_ratio*self.scrollArea.verticalScrollBar().maximum()+0.5)
+            self.scrollArea.verticalScrollBar().setValue(target_val)
+        except ZeroDivisionError:
+            return
     
     def __setPaintType_line(self):
+        '''
+        设置绘图类型为直线
+        '''
         self.imageLabel.setPaintType_Line()
         self.imageLabel1.setPaintType_Line()
     
     def __setPaintType_rect(self):
+        '''
+        设置绘图类型为矩形
+        '''
         self.imageLabel.setPaintType_Rect()
         self.imageLabel1.setPaintType_Rect()
         
     def __setPenWidth(self, width:str):
+        '''
+        设置绘图线宽
+        '''
         self.imageLabel.setPenWidth(width)
         self.imageLabel1.setPenWidth(width)
         
     def __toggleToolBoxDockWgt(self, checked:bool):
+        '''
+        菜单切换dock widget显示
+        '''
         if checked:
             self.toolBoxWidget.show()
         else:
             self.toolBoxWidget.close()
     
     def __toggleColorGamutWgt(self, checked:bool):
+        '''
+        菜单切换dock widget显示
+        '''
         if checked:
             self.plotDockWgt.show()
         else:
             self.plotDockWgt.close()
             
     def __syncRightPos(self):
+        '''
+        当点击面板上的sync按钮后，同步左右两侧的绘图坐标
+        '''
         self.start_x_edit1.setText(self.start_x_edit.text())
         self.start_y_edit1.setText(self.start_y_edit.text())
         self.end_x_edit1.setText(self.end_x_edit.text())
         self.end_y_edit1.setText(self.end_y_edit.text())
         
     def __syncLeftPos(self):
+        '''
+        当点击面板上的sync按钮后，同步左右两侧的绘图坐标
+        '''
         self.start_x_edit.setText(self.start_x_edit1.text())
         self.start_y_edit.setText(self.start_y_edit1.text())
         self.end_x_edit.setText(self.end_x_edit1.text())
         self.end_y_edit.setText(self.end_y_edit1.text())
     
     def createDockWidget(self):
+        '''
+        创建面板---绘图工具箱
+        '''
         self.toolBoxWidget = QDockWidget(self)
         self.toolBoxWidget.setWindowTitle('pen box')
         self.toolBoxWidget.setAllowedAreas(Qt.LeftDockWidgetArea|Qt.RightDockWidgetArea)
@@ -332,7 +383,7 @@ class JonahWindow(QMainWindow):
         
     def __flushPaintPosEdit(self, startPt:QPointF, endPt:QPointF):
         '''
-        接收的坐标是imagelabel的绘图坐标，需要根据当前的zoom计算出真实的图片坐标
+        接收的坐标是imagelabel的绘图坐标，需要根据当前的zoom计算出真实的图片坐标，并显示在面板上
         '''
         realStartPt = (startPt/self.zoomList[self.zoomIdx]).toPoint()
         realEndPt = (endPt/self.zoomList[self.zoomIdx]).toPoint()
