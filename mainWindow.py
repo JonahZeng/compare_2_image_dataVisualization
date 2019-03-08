@@ -36,6 +36,7 @@ class JonahWindow(QMainWindow):
         
     def initUI(self):
         fileMenu = self.menuBar().addMenu('&File')
+        self.menuBar().setStyleSheet('QMenuBar{background:rgb(128,128,128)}QMenuBar::item:selected{background:rgb(128,128,128)}QMenu{background:rgb(128,128,128)}QMenu::item:selected{background-color:#654321;}')
         openFilesAction = QAction('Open files', self)
         exitAction = QAction('Exit', self)
         closeAction = QAction('Close', self)
@@ -58,6 +59,7 @@ class JonahWindow(QMainWindow):
         
         viewMenu = self.menuBar().addMenu('&View')
         dockWidgetMenu = QMenu('dock widget', self)
+        dockWidgetMenu.setStyleSheet('QMenu{background:rgb(128,128,128)}QMenu::item:selected{background-color:#654321;}')
         viewMenu.addMenu(dockWidgetMenu)
         self.penBoxAction = QAction('pen box', self)
         self.colorGamutAction = QAction('color gamut', self)
@@ -259,6 +261,7 @@ class JonahWindow(QMainWindow):
         vlayout = QVBoxLayout()
         toolBoxContainer.setLayout(vlayout)
         self.toolBoxWidget.setWidget(toolBoxContainer)
+        toolBoxContainer.setStyleSheet('QPushButton{background-color:rgb(156,156,156)}QComboBox{border:1px solid gray}')
         
         penGroup = QButtonGroup()
         penLayout = QHBoxLayout()
@@ -319,16 +322,14 @@ class JonahWindow(QMainWindow):
         paintPosLayout0.addWidget(self.end_y_edit, 3, 1, 1, 1)
         
         self.paintOk = QPushButton('ok')
-        self.paintOk.setStyleSheet('QPushButton{background:rgb(100,100,100); color:rgb(255,255,255)}')
         paintPosLayout0.addWidget(self.paintOk, 4, 1, 1, 1)
         
         vline1 = QFrame()
         vline1.setFrameShape(QFrame.VLine)
         syncLayout = QVBoxLayout()
         self.syncRight = QPushButton('--->')
-        self.syncRight.setStyleSheet('QPushButton{background:rgb(100,100,100); color:rgb(30,30,192)}')
         self.syncLeft = QPushButton('<---')
-        self.syncLeft.setStyleSheet('QPushButton{background:rgb(100,100,100); color:rgb(30,30,192)}')
+
         syncLayout.addWidget(self.syncRight)
         syncLayout.addWidget(self.syncLeft)
         vline2 = QFrame()
@@ -361,7 +362,6 @@ class JonahWindow(QMainWindow):
         paintPosLayout1.addWidget(self.end_y_edit1, 3, 1, 1, 1)
         
         self.paintOk1 = QPushButton('ok')
-        self.paintOk1.setStyleSheet('QPushButton{background:rgb(100,100,100); color:rgb(255,255,255)}')
         paintPosLayout1.addWidget(self.paintOk1, 4, 1, 1, 1)
         
         paintPosLayout = QHBoxLayout()
@@ -463,6 +463,7 @@ class JonahWindow(QMainWindow):
         vlayout = QVBoxLayout()
         pltWgtContainer.setLayout(vlayout)
         self.plotDockWgt.setWidget(pltWgtContainer)
+        pltWgtContainer.setStyleSheet('QPushButton{background-color:rgb(156,156,156)}')
         
         plot_btn_layout = QGridLayout()
         self.plot_rgb_contourf_line = QPushButton('rgb contour/line')
@@ -529,95 +530,102 @@ class JonahWindow(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.plotDockWgt)
     
     def plot_rgb_contourf_line_func(self):
-        if self.imageLabel.paintEnd==False or self.imageLabel.pixmap()==None:
+        f = self.__plot_contourf_line(self.imageLabel, self.opendFile, 0)
+        f1 = self.__plot_contourf_line(self.imageLabel1, self.opendFile1, 1)
+        if f is None and f1 is None:
             return
-        pos_0, pos_1 = QPointF(self.imageLabel.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(self.imageLabel.paintCoordinates[1])/self.zoomList[self.zoomIdx]
-        x_0, x_1, y_0, y_1 = pos_0.x(), pos_1.x(), pos_0.y(), pos_1.y()
-        if x_0==x_1 and y_0==y_1:
-            return
-        if self.paintType_rect_btn.isChecked():
-            if x_0 > x_1:
-                x_0, x_1 = x_1, x_0
-            if y_0 > y_1:
-                y_0, y_1 = y_1, y_0
-            data = cv.imread(self.opendFile)
-            if data is None:
-                QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
-                return
-            data_r = data[int(y_0):int(y_1), int(x_0):int(x_1), 2]
-            data_g = data[int(y_0):int(y_1), int(x_0):int(x_1), 1]
-            data_b = data[int(y_0):int(y_1), int(x_0):int(x_1), 0]
-            data_max = np.max([data_r.max(), data_g.max(), data_b.max()])
-            data_min = np.max([data_r.min(), data_g.min(), data_b.min()])
-            X = np.arange(data_r.shape[1])
-            Y = np.arange(data_r.shape[0])
-            X, Y = np.meshgrid(X, Y)
-            fig = plt.figure(0, figsize=(4, 9))
-            ax1 = fig.add_subplot(311)
-            surf1 = ax1.contourf(X, Y, data_r, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
-            ax1.set_ylim([data_r.shape[0], 0])
-            ax1.set_title('r contour')
-            fig.colorbar(surf1)
-        
-            ax2 = fig.add_subplot(312)
-            surf2 = ax2.contourf(X, Y, data_g, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
-            ax2.set_ylim([data_g.shape[0], 0])
-            ax2.set_title('g contour')
-            fig.colorbar(surf2)
-        
-            ax3 = fig.add_subplot(313)
-            surf3 = ax3.contourf(X, Y, data_b, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
-            ax3.set_ylim([data_b.shape[0], 0])
-            ax3.set_title('b contour')
-            fig.colorbar(surf3)
-            fig.tight_layout()
+        else:
             plt.show()
-        elif self.paintType_line_btn.isChecked():
-            if x_0 > x_1:
-                x_0, x_1 = x_1, x_0
-                y_0, y_1 = y_1, y_0
-            data = cv.imread(self.opendFile)
-            if data is None:
-                QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
-                return
-            if x_0==x_1:
-                if y_0<y_1:
-                    data_r = data[y_0:y_1, x_0, 2]
-                    data_g = data[y_0:y_1, x_0, 1]
-                    data_b = data[y_0:y_1, x_0, 0]
+
+            
+    def __plot_contourf_line(self, label:ImageLabel, file:str, figCnt:int):
+        if label.paintEnd==True and label.pixmap()!=None:
+            pos_0, pos_1 = QPointF(label.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(label.paintCoordinates[1])/self.zoomList[self.zoomIdx]
+            x_0, x_1, y_0, y_1 = pos_0.x(), pos_1.x(), pos_0.y(), pos_1.y()
+            if x_0!=x_1 and y_0!=y_1 and self.paintType_rect_btn.isChecked():
+                if x_0 > x_1:
+                    x_0, x_1 = x_1, x_0
+                if y_0 > y_1:
+                    y_0, y_1 = y_1, y_0
+                data = cv.imread(file)
+                if data is None:
+                    QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
+                    return None
+                data_r = data[int(y_0):int(y_1), int(x_0):int(x_1), 2]
+                data_g = data[int(y_0):int(y_1), int(x_0):int(x_1), 1]
+                data_b = data[int(y_0):int(y_1), int(x_0):int(x_1), 0]
+                data_max = np.max([data_r.max(), data_g.max(), data_b.max()])
+                data_min = np.min([data_r.min(), data_g.min(), data_b.min()])
+                X = np.arange(data_r.shape[1])
+                Y = np.arange(data_r.shape[0])
+                X, Y = np.meshgrid(X, Y)
+                fig = plt.figure(figCnt, figsize=(4, 9))
+                ax1 = fig.add_subplot(311)
+                surf1 = ax1.contourf(X, Y, data_r, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
+                ax1.set_ylim([data_r.shape[0], 0])
+                ax1.set_title('r contour')
+                fig.colorbar(surf1)
+        
+                ax2 = fig.add_subplot(312)
+                surf2 = ax2.contourf(X, Y, data_g, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
+                ax2.set_ylim([data_g.shape[0], 0])
+                ax2.set_title('g contour')
+                fig.colorbar(surf2)
+        
+                ax3 = fig.add_subplot(313)
+                surf3 = ax3.contourf(X, Y, data_b, np.linspace(data_min-5, data_max+5, 11), cmap=cm.get_cmap('coolwarm'))
+                ax3.set_ylim([data_b.shape[0], 0])
+                ax3.set_title('b contour')
+                fig.colorbar(surf3)
+                fig.tight_layout()
+                return fig
+            elif self.paintType_line_btn.isChecked() and not(x_0==x_1 and y_0==y_1):
+                if x_0 > x_1:
+                    x_0, x_1 = x_1, x_0
+                    y_0, y_1 = y_1, y_0
+                data = cv.imread(file)
+                if data is None:
+                    QMessageBox.information(self, 'information', 'can not open image %s'%self.opendFile, QMessageBox.Ok)
+                    return None
+                if x_0==x_1:
+                    if y_0<y_1:
+                        data_r = data[y_0:y_1, x_0, 2]
+                        data_g = data[y_0:y_1, x_0, 1]
+                        data_b = data[y_0:y_1, x_0, 0]
+                    else:
+                        data_r = data[y_0:y_1:-1, x_0, 2]
+                        data_g = data[y_0:y_1:-1, x_0, 1]
+                        data_b = data[y_0:y_1:-1, x_0, 0]
+                elif y_0==y_1:
+                    data_r = data[y_0, x_0:x_1, 2]
+                    data_g = data[y_0, x_0:x_1, 1]
+                    data_b = data[y_0, x_0:x_1, 0]
                 else:
-                    data_r = data[y_0:y_1:-1, x_0, 2]
-                    data_g = data[y_0:y_1:-1, x_0, 1]
-                    data_b = data[y_0:y_1:-1, x_0, 0]
-            elif y_0==y_1:
-                data_r = data[y_0, x_0:x_1, 2]
-                data_g = data[y_0, x_0:x_1, 1]
-                data_b = data[y_0, x_0:x_1, 0]
-            else:
-                length = math.sqrt((x_1-x_0)*(x_1-x_0) + (y_1-y_0)*(y_1-y_0))
-                data_r = np.zeros((int(length), ), np.uint8)
-                data_g = np.zeros((int(length), ), np.uint8)
-                data_b = np.zeros((int(length), ), np.uint8)
-                k = (y_1-y_0)/(x_1-x_0)
-                for l in range(int(length)):
-                    delt_x = math.sqrt((l*l)/(1+k*k))
-                    delt_y = k*delt_x
-                    data_r[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 2]
-                    data_g[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 1]
-                    data_b[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 0]
-                fig = plt.figure(0, figsize=(6, 4))
+                    length = math.sqrt((x_1-x_0)*(x_1-x_0) + (y_1-y_0)*(y_1-y_0))
+                    data_r = np.zeros((int(length), ), np.uint8)
+                    data_g = np.zeros((int(length), ), np.uint8)
+                    data_b = np.zeros((int(length), ), np.uint8)
+                    k = (y_1-y_0)/(x_1-x_0)
+                    for l in range(int(length)):
+                        delt_x = math.sqrt((l*l)/(1+k*k))
+                        delt_y = k*delt_x
+                        data_r[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 2]
+                        data_g[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 1]
+                        data_b[l] = data[int(y_0+delt_y+0.5), int(x_0+delt_x+0.5), 0]
+                fig = plt.figure(figCnt, figsize=(6, 4))
                 ax = fig.add_subplot(111)
                 ax.plot(data_r, 'r-', data_g, 'g-', data_b, 'b-')
-                plt.show()
-                    
+                return fig
+            else:
+                return None
+        else:
+            return None
                 
     def eventFilter(self, obj:QObject, event:QEvent):
         if obj is self.toolBoxWidget and event.type()==QEvent.Close:
-            #self.toolBoxWidget.hide()
             self.penBoxAction.setChecked(False)
             return True
         if obj is self.plotDockWgt and event.type()==QEvent.Close:
-            #self.plotDockWgt.hide()
             self.colorGamutAction.setChecked(False)
             return True
         
@@ -625,48 +633,84 @@ class JonahWindow(QMainWindow):
             
     
     def plot_rgb_hist_func(self):
-        if self.imageLabel.paintEnd==False or self.imageLabel.pixmap()==None:
-            return
-        pos_0, pos_1 = QPointF(self.imageLabel.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(self.imageLabel.paintCoordinates[1])/self.zoomList[self.zoomIdx]
-        x_0, x_1, y_0, y_1 = pos_0.x(), pos_1.x(), pos_0.y(), pos_1.y()
-        if self.paintType_rect_btn.isChecked():
+        fig, fig1 = None, None
+        if self.imageLabel.paintEnd==True and self.imageLabel.pixmap()!=None:
+            pos_0, pos_1 = QPointF(self.imageLabel.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(self.imageLabel.paintCoordinates[1])/self.zoomList[self.zoomIdx]
+            x_0, x_1, y_0, y_1 = pos_0.x(), pos_1.x(), pos_0.y(), pos_1.y()
             if x_0 > x_1:
                 x_0, x_1 = x_1, x_0
             if y_0 > y_1:
                 y_0, y_1 = y_1, y_0
-        elif self.paintType_line_btn.isChecked():
-            if x_0 > x_1:
-                x_0, x_1 = x_1, x_0
-                y_0, y_1 = y_1, y_0
-        data = cv.imread(self.opendFile)
-        if data is None:
-            QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
+            
+            data = cv.imread(self.opendFile)
+            if data is None:
+                QMessageBox.information(self, 'information', 'can not open image %s'%self.opendFile, QMessageBox.Ok)
+                return
+
+            data_r = data[int(y_0):int(y_1), int(x_0):int(x_1), 2].flatten()
+            data_g = data[int(y_0):int(y_1), int(x_0):int(x_1), 1].flatten()
+            data_b = data[int(y_0):int(y_1), int(x_0):int(x_1), 0].flatten()
+            n_bins = 64
+        
+            fig = plt.figure(0, figsize=(4, 6))
+            ax1 = fig.add_subplot(311)
+            N1, bins1, pathch1 = ax1.hist(data_r, n_bins, histtype='bar', color='r')
+            ax1.set_title('r0 hist')
+        
+            ax2 = fig.add_subplot(312)
+            N2, bins2, pathch2 = ax2.hist(data_g, n_bins, histtype='bar', color='g')
+            ax2.set_title('g0 hist')
+
+            ax3 = fig.add_subplot(313)
+            N3, bins3, pathch3 = ax3.hist(data_b, n_bins, histtype='bar', color='b')
+            ax3.set_title('b0 hist')
+
+            N_max_0 = np.max([N1.max(), N2.max(), N3.max()])
+            ax1.set_ylim([0, N_max_0])
+            ax1.set_xlim([0, 255])
+            ax2.set_ylim([0, N_max_0])
+            ax2.set_xlim([0, 255])
+            ax3.set_ylim([0, N_max_0])
+            ax3.set_xlim([0, 255])
+            fig.tight_layout()
+        
+        if self.imageLabel1.paintEnd==True and self.imageLabel1.pixmap()!=None:            
+            pos_1_0, pos_1_1 = QPointF(self.imageLabel1.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(self.imageLabel1.paintCoordinates[1])/self.zoomList[self.zoomIdx]
+            x_1_0, x_1_1, y_1_0, y_1_1 = pos_1_0.x(), pos_1_1.x(), pos_1_0.y(), pos_1_1.y()
+            if x_1_0 > x_1_1:
+                x_1_0, x_1_1 = x_1_1, x_1_0
+            if y_1_0 > y_1_1:
+                y_1_0, y_1_1 = y_1_1, y_1_0
+            data1 = cv.imread(self.opendFile1)
+            if data1 is None:
+                QMessageBox.information(self, 'information', 'can not open image %s'%self.opendFile1, QMessageBox.Ok)
+                return
+            data1_r = data1[int(y_1_0):int(y_1_1), int(x_1_0):int(x_1_1), 2].flatten()
+            data1_g = data1[int(y_1_0):int(y_1_1), int(x_1_0):int(x_1_1), 1].flatten()
+            data1_b = data1[int(y_1_0):int(y_1_1), int(x_1_0):int(x_1_1), 0].flatten()
+            fig1 = plt.figure(1, figsize=(4, 6))
+            ax1_1 = fig1.add_subplot(311)
+            N1_1, bins1_1, pathch1_1 = ax1_1.hist(data1_r, n_bins, histtype='bar', color='r')
+            ax1_1.set_title('r0 hist')
+        
+            ax1_2 = fig1.add_subplot(312)
+            N1_2, bins1_2, pathch1_2 = ax1_2.hist(data1_g, n_bins, histtype='bar', color='g')
+            ax1_2.set_title('g0 hist')
+
+            ax1_3 = fig1.add_subplot(313)
+            N1_3, bins1_3, pathch1_3 = ax1_3.hist(data1_b, n_bins, histtype='bar', color='b')
+            ax1_3.set_title('b0 hist')
+
+            N_max_1 = np.max([N1_1.max(), N1_2.max(), N1_3.max()])
+            ax1_1.set_ylim([0, N_max_1])
+            ax1_1.set_xlim([0, 255])
+            ax1_2.set_ylim([0, N_max_1])
+            ax1_2.set_xlim([0, 255])
+            ax1_3.set_ylim([0, N_max_1])
+            ax1_3.set_xlim([0, 255])
+            fig1.tight_layout()
+        if fig is None and fig1 is None:
             return
-        data_r = data[int(y_0):int(y_1), int(x_0):int(x_1), 2].flatten()
-        data_g = data[int(y_0):int(y_1), int(x_0):int(x_1), 1].flatten()
-        data_b = data[int(y_0):int(y_1), int(x_0):int(x_1), 0].flatten()
-        n_bins = 64
-        
-        fig = plt.figure(0, figsize=(4, 6))
-        ax1 = fig.add_subplot(311)
-        N1, bins1, pathch1 = ax1.hist(data_r, n_bins, histtype='bar', color='r', label='R')
-        ax1.set_title('r hist')
-        
-        ax2 = fig.add_subplot(312)
-        N2, bins2, pathch2 = ax2.hist(data_g, n_bins, histtype='bar', color='g', label='G')
-        ax2.set_title('g hist')
-        
-        ax3 = fig.add_subplot(313)
-        N3, bins3, pathch3 = ax3.hist(data_b, n_bins, histtype='bar', color='b', label='B')
-        ax3.set_title('b hist')
-        N_max = np.max([N1.max(), N2.max(), N3.max()])
-        ax1.set_ylim([0, N_max])
-        ax1.set_xlim([0, 255])
-        ax2.set_ylim([0, N_max])
-        ax2.set_xlim([0, 255])
-        ax3.set_ylim([0, N_max])
-        ax3.set_xlim([0, 255])
-        fig.tight_layout()
         plt.show()
 
         
