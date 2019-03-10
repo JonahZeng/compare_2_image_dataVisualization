@@ -12,6 +12,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import math
+import decompress_jpeg
 
 class JonahWindow(QMainWindow):
     def __init__(self):
@@ -43,7 +44,7 @@ class JonahWindow(QMainWindow):
         fileMenu.addAction(openFilesAction)
         fileMenu.addAction(closeAction)
         fileMenu.addAction(exitAction)
-        openFilesAction.triggered.connect(self.onOpenFile)
+        openFilesAction.triggered.connect(self.onOpenFileAction)
         closeAction.triggered.connect(self.onCloseAction)
         exitAction.triggered.connect(self.onQuit)
         
@@ -530,15 +531,15 @@ class JonahWindow(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, self.plotDockWgt)
     
     def plot_rgb_contourf_line_func(self):
-        f = self.__plot_contourf_line(self.imageLabel, self.opendFile, 0)
-        f1 = self.__plot_contourf_line(self.imageLabel1, self.opendFile1, 1)
+        f = self.__plot_rgb_contourf_line(self.imageLabel, self.opendFile, 0)
+        f1 = self.__plot_rgb_contourf_line(self.imageLabel1, self.opendFile1, 1)
         if f is None and f1 is None:
             return
         else:
             plt.show()
 
             
-    def __plot_contourf_line(self, label:ImageLabel, file:str, figCnt:int):
+    def __plot_rgb_contourf_line(self, label:ImageLabel, file:str, figCnt:int):
         if label.paintEnd==True and label.pixmap()!=None:
             pos_0, pos_1 = QPointF(label.paintCoordinates[0])/self.zoomList[self.zoomIdx], QPointF(label.paintCoordinates[1])/self.zoomList[self.zoomIdx]
             x_0, x_1, y_0, y_1 = pos_0.x(), pos_1.x(), pos_0.y(), pos_1.y()
@@ -547,10 +548,21 @@ class JonahWindow(QMainWindow):
                     x_0, x_1 = x_1, x_0
                 if y_0 > y_1:
                     y_0, y_1 = y_1, y_0
-                data = cv.imread(file)
-                if data is None:
-                    QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
-                    return None
+                if file.endswith(('.jpg',  '.jpeg',  'JPG',  'JPEG')):
+                    reader = decompress_jpeg.jpeg_reader(bytes(file,  encoding='utf-8'))
+                    rgb_data, out_rgb = reader.get_rgb_data()
+                    if rgb_data is None:
+                        QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
+                        return None
+                    data = rgb_data.reshape((out_rgb.image_height,  out_rgb.image_width, 3)).copy()
+                    del rgb_data
+                    reader.releaseBuffer()
+                    data = data[:, :, ::-1]# rgb->bgr
+                else:
+                    data = cv.imread(file)
+                    if data is None:
+                        QMessageBox.information(self, 'information', 'can not open image', QMessageBox.Ok)
+                        return None
                 data_r = data[int(y_0):int(y_1), int(x_0):int(x_1), 2]
                 data_g = data[int(y_0):int(y_1), int(x_0):int(x_1), 1]
                 data_b = data[int(y_0):int(y_1), int(x_0):int(x_1), 0]
@@ -763,7 +775,7 @@ class JonahWindow(QMainWindow):
         self.end_x_edit1.setText('')
         self.end_y_edit1.setText('')
         
-    def onOpenFile(self):
+    def onOpenFileAction(self):
         fileList = QFileDialog.getOpenFileNames(self, 'open', self.workPath, 'Images(*.jpg *.jpeg *.png *.bmp);;All file(*.*)')# type:list[str]
         if len(fileList)<=0 or len(fileList[0])<=0:
             return
